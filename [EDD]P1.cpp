@@ -16,12 +16,12 @@ struct nodo{
 }*primero, *ultimo;
 
 void Menu();
-void AgregarNodo(char,int,int);
-void AgregarNodoInicio(char);
-void AgregarNodoFinal(char);
-void AgregarNodoPosicion(char,int);
-void EliminarNodo(char);
-void BuscarNodo(string);
+void AgregarNodo(char,int,int,int);
+void AgregarNodoInicio(char,int,int,int,string);
+void AgregarNodoFinal(char,int,int,int,string);
+void AgregarNodoPosicion(char,int,int,int,int,string);
+void EliminarNodo(int,int);
+void BuscarNodo(string,string);
 void ModificarPalabra(int,int,string);
 void EliminarBuscarReemplazar(int Ex,int Ey);
 void MostrarLista1();
@@ -33,13 +33,16 @@ void Tecla();
 bool Vacia();
 void TeclaDelete();
 void EnviarPalabraReemplazar();
-void MandaraEliminarBuscar(int,int,int);
-
+void MandaraEliminarBuscar(int,int,int,int,string);
+void ModificarPosiciones(int,int,int);
+void CambiarEditorTexto();
 
 int TamanioListaDoble();
 string texto;
 int posx = 0;
 int posy = 2;
+int contadorNodos = 1;
+int contPalabrasModificadas=0;
 
 
 
@@ -80,16 +83,7 @@ void Menu(){
 				cout << "\n";
 				system("pause");
 				break;
-			case 3:
-				char tcad;
-				int tpos;
-			    cout << "\ndato ingresar :";
-			    cin >> tcad;
-			    cout << "\ndato pos :";
-			    cin >> tpos;
-			    for (int i = tpos; i <= tpos+2; i++) {
-					AgregarNodoPosicion(tcad,i);
-				}			    
+			case 3:							    
 				system("pause");
 				break;				
 		}
@@ -132,7 +126,7 @@ void AgregarTexto(){
 void EnviarDatos(){
 	string agregarPalabra;
 	system("cls");
-	cout << " ^w(Buscar y Reemplazar)	^c(Reportes)	s^(Guardar)    \n" ;
+	cout << " ^w(Buscar y Reemplazar)	^c(Reportes)	 s^(Guardar)    x^(Escape) \n" ;
 	cout << "D-----------------------------------------------------------------------D\n" ;
 	cout << texto;
 	char key;
@@ -146,24 +140,35 @@ void EnviarDatos(){
 				Menu();		
 			}else if(ascii == 13){   //tecla enter
 				cout << "\n";
-				AgregarNodo(' ',posx,posy);
+				AgregarNodo('\n',posx,posy,contadorNodos);				
+				contadorNodos++;							
+				texto += "\n";								
+				
+				int cp = posx;
+				cp = cp - agregarPalabra.size();
+				for (int i = cp; i < posx; i++) {
+					ModificarPalabra(i,posy,agregarPalabra);
+				} 
 				posy++;
-				contador++;
-				posx=0;
-				texto += "\n";
+				posx=0;	
+				agregarPalabra= "";
+				
 			}else if(ascii == 8){ // tecla delete
 				TeclaDelete();
 				posx--;
-				contador--;
+				contadorNodos--;
 				EnviarDatos();
 			}else if(ascii == 23){ // tecla ctrl+w
+				contPalabrasModificadas = 0;
 				EnviarPalabraReemplazar();
+				EnviarDatos();
 			}else if(ascii == 32){ // tecla espacio
 				cout << key;
-				AgregarNodo(key,posx,posy);
+				AgregarNodo(key,posx,posy,contadorNodos);
 				posx++;
-				contador++;
+				contadorNodos++;
 				texto += key;
+				
 				int cp = posx;
 				cp = cp - agregarPalabra.size() -1;
 				for (int i = cp; i < posx-1; i++) {
@@ -172,9 +177,9 @@ void EnviarDatos(){
 				agregarPalabra= "";
 			}else{
 				cout << key;
-				AgregarNodo(key,posx,posy);
+				AgregarNodo(key,posx,posy,contadorNodos);
 				posx++;
-				contador++;
+				contadorNodos++;
 				texto += key;
 				agregarPalabra+=key;
 			}	
@@ -183,6 +188,7 @@ void EnviarDatos(){
 	}	
 	cout << "\n\n";
 }
+
 
 void EnviarPalabraReemplazar(){
 	string pBuscar;
@@ -205,39 +211,65 @@ void EnviarPalabraReemplazar(){
 	}
 	pBuscar = tArreglo[0];
 	pReemplazar = tArreglo[1];
-	BuscarNodo(pBuscar);
+	BuscarNodo(pBuscar,pReemplazar);
+	CambiarEditorTexto();
+	cout<<"\n** "<<contPalabrasModificadas<<" Palabras Afectadas"<<" **"<<"\n\n\n";
+	system("pause");
 }
 
-void MandaraEliminarBuscar(int mx,int my,int tamanio){
-	
+void MandaraEliminarBuscar(int mx,int my,int tamanio, int cont,string pSustituir){
+	contPalabrasModificadas++;
+	int cSus = pSustituir.size();
+//	cout << "\n palabra sust :"<<pSustituir<<endl;
 	for (int i = mx; i <= mx+tamanio; i++) {
  	 	EliminarBuscarReemplazar(i,my);
 	}
+	
+	int Desplegarx = mx;
+	char temp[cSus];		
+	strcpy(temp,pSustituir.c_str());
+	int susti=0;
+	int agregarC = cont;
+	for (int i = cont; i < cont+cSus; i++) {		
+		AgregarNodoPosicion(temp[susti],i,mx,my,agregarC,pSustituir);	
+		mx++;
+		susti++;
+		agregarC++;	
+	//	tamanioDes++;	
+	}		
+	ModificarPosiciones(Desplegarx,my,cont);	
 }
-
 
 void TeclaDelete(){
 	nodo* actual = new nodo();
 	actual = ultimo;
-	char a = actual -> dato;
-	EliminarNodo(a);
-
-	int b = 0;
-	b = texto.size();
-	char temp[b];
+	char bus = actual -> dato;
+	int a = actual -> x;
+	int b = actual -> y;
+	if(bus=='\n'){
+		posy--;
+		posx = a+1;
+	} 
+	EliminarNodo(a,b);
+	CambiarEditorTexto();
+/*
+	int ma = 0;
+	ma = texto.size();
+	char temp[ma];
 		
 	strcpy(temp,texto.c_str());
 	texto = "";
-	for (int i = 0; i < b-1; i++) {
+	for (int i = 0; i < ma-1; i++) {
  	 	texto+= temp[i];
-	}	
+	}	*/
 }
 
-void AgregarNodo(char n,int nx,int ny){
+void AgregarNodo(char n,int nx,int ny,int cont){
 	nodo* nuevo = new nodo();
 	nuevo -> dato = n;
 	nuevo -> x = nx;
 	nuevo -> y = ny;
+	nuevo -> contador = cont;
 	
 	if(primero == NULL){
 		primero = nuevo;
@@ -254,9 +286,13 @@ void AgregarNodo(char n,int nx,int ny){
 //	cout << "Nodo Ingresado \n";	
 }
 
-void AgregarNodoInicio(char n){
+void AgregarNodoInicio(char n,int nx,int ny,int cont,string pagregar){
 	nodo* nuevo = new nodo();
 	nuevo -> dato = n;
+	nuevo -> x = nx;
+	nuevo -> y = ny;
+	nuevo -> contador = cont;
+	nuevo -> palabra = pagregar;
 	nuevo -> siguiente = NULL;
 	nuevo -> atras = NULL;
 	
@@ -270,9 +306,13 @@ void AgregarNodoInicio(char n){
 	}
 }
 
-void AgregarNodoFinal(char n){
+void AgregarNodoFinal(char n,int nx,int ny,int cont,string pagregar){
 	nodo* nuevo = new nodo();
 	nuevo -> dato = n;
+	nuevo -> x = nx;
+	nuevo -> y = ny;
+	nuevo -> contador = cont;
+	nuevo -> palabra = pagregar;
 	nuevo -> siguiente = NULL;
 	nuevo -> atras = NULL;
 	
@@ -286,9 +326,13 @@ void AgregarNodoFinal(char n){
 	}
 }
 
-void AgregarNodoPosicion(char n,int npos){
+void AgregarNodoPosicion(char n,int npos,int nx,int ny,int cont,string pSustituir){
 	nodo* nuevo = new nodo();
 	nuevo -> dato = n;
+	nuevo -> x = nx;
+	nuevo -> y = ny;
+	nuevo -> contador = cont;
+	nuevo -> palabra = pSustituir;
 	nuevo -> siguiente = NULL;
 	nuevo -> atras = NULL;
 	
@@ -297,10 +341,10 @@ void AgregarNodoPosicion(char n,int npos){
 		ultimo = nuevo;
 	}else{
 		if(npos == 1){
-			AgregarNodoInicio(n);
+			AgregarNodoInicio(n,nx,ny,cont,pSustituir);
 			
 		}else if(npos== (TamanioListaDoble()+1)){
-			AgregarNodoFinal(n);
+			AgregarNodoFinal(n,nx,ny,cont,pSustituir);
 			
 		}else if(npos> 1 && npos < (TamanioListaDoble()+1)){
 			nodo* aux;
@@ -320,7 +364,7 @@ void AgregarNodoPosicion(char n,int npos){
 //	cout << "Nodo Ingresado \n";	
 }
 
-void EliminarNodo(char nodoBuscado){
+void EliminarNodo(int Ex, int Ey){
 	nodo* actual = new nodo();
 	actual = primero;
 	nodo* anterior = new nodo();
@@ -329,7 +373,7 @@ void EliminarNodo(char nodoBuscado){
 	
 	if(primero != NULL){
 		while(actual!=NULL && encontrado!=true){
-			if(actual->dato == nodoBuscado){
+			if(actual->x == Ex && actual->y == Ey){
 				if(actual==primero){
 					primero = primero->siguiente;
 					primero->atras = NULL;
@@ -354,7 +398,7 @@ void EliminarNodo(char nodoBuscado){
 	}
 }
 
-void BuscarNodo(string nodoBuscado){
+void BuscarNodo(string nodoBuscado, string nodoSustituir){
 	nodo* actual = new nodo();
 	actual = primero;
 	bool encontrado = false;
@@ -365,8 +409,9 @@ void BuscarNodo(string nodoBuscado){
 			if(actual->palabra == nodoBuscado){
 				contBus++;				
 				if(contBus==1){
-					cout << "dato: -" << actual->dato << " pos:"<<actual->x<<actual->y<<"--"<<tamanio-1<<endl;
-					MandaraEliminarBuscar(actual->x,actual->y,tamanio-1);																				
+				//	cout << "dato: -" << actual->dato << " pos:"<<actual->x<<actual->y<<"nodo :"<<actual->contador<<endl;
+					MandaraEliminarBuscar(actual->x,actual->y,tamanio-1,actual->contador,nodoSustituir);
+																									
 				}
 				
 				if (contBus==tamanio){
@@ -383,6 +428,7 @@ void BuscarNodo(string nodoBuscado){
 		cout << "\n Lista Vacia";
 	}	
 }
+
 void EliminarBuscarReemplazar(int Ex,int Ey){
 	nodo* actual = new nodo();
 	actual = primero;
@@ -421,7 +467,6 @@ void ModificarPalabra(int Modix, int Modiy,string nodoModificar){
 	nodo* actual = new nodo();
 	actual = primero;
 	bool encontrado = false;
-	
 	if(primero != NULL){
 		while(actual!=NULL && encontrado!=true){
 			if(actual->x == Modix && actual->y == Modiy){
@@ -435,6 +480,29 @@ void ModificarPalabra(int Modix, int Modiy,string nodoModificar){
 		if(!encontrado){
 			cout << "\n No encontrado";
 		}
+	}else{
+		cout << "\n Lista Vacia";
+	} 
+}
+
+void ModificarPosiciones(int Modix, int Modiy,int Modic){
+	nodo* actual = new nodo();
+	actual = primero;
+	bool encontrado = false;	
+	int xSus = Modix;
+	int cSus = Modic;
+	if(primero != NULL){
+		while(actual!=NULL){
+			if(actual->y == Modiy && actual->x >= Modix){
+				actual -> x = xSus;
+				xSus++;							
+			}
+			if(actual->contador>=Modic){
+				actual -> contador = cSus;
+				cSus++;
+			}
+			actual = actual->siguiente;
+		}		
 	}else{
 		cout << "\n Lista Vacia";
 	} 
@@ -470,13 +538,33 @@ void Buscar(){
 	cout << "\n\n fin buscar  ";  
 }
 
+void CambiarEditorTexto(){
+	texto = "";
+	nodo* actual = new nodo();
+	actual = primero;
+	if(primero!=NULL){
+		while(actual!=NULL){
+			texto +=actual -> dato;
+			actual = actual -> siguiente;
+		}
+	}else{
+		cout << "\n lista vacia \n";
+	}
+	cout << "\n";
+}
+
 void MostrarLista1(){
 	cout << "\n Lista = \n";
 	nodo* actual = new nodo();
 	actual = primero;
 	if(primero!=NULL){
 		while(actual!=NULL){
-			cout << "-" << actual -> dato << "-(" << actual -> x<<","<<actual -> y<<")"<<"->"<<actual -> palabra<<"\n";
+			
+			if(actual->dato == '\n'){
+				cout <<actual->contador <<"-" << ' ' << "-(" << actual -> x<<","<<actual -> y<<")"<<"->"<<actual -> palabra<<"\n";
+			}else{
+				cout <<actual->contador <<"-" << actual -> dato << "-(" << actual -> x<<","<<actual -> y<<")"<<"->"<<actual -> palabra<<"\n";				
+			}
 			actual = actual -> siguiente;
 		}
 	}else{
