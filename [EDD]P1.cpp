@@ -2,9 +2,11 @@
 #include<conio.h>
 #include<cstring>
 #include<string>
-#include<stdlib.h>
 #include<bits/stdc++.h>
 #include<sstream> 
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
 
 using namespace::std;
 
@@ -23,6 +25,8 @@ struct pila1{
 	string estado;
 	string palabra;
 	string posicion;
+	int x;
+	int y;
 	pila1* siguiente;
 }*primeroP1;
 
@@ -33,6 +37,8 @@ struct pila2{
 	string estado;
 	string palabra;
 	string posicion;
+	int x;
+	int y;
 	pila2* siguiente;
 }*primeroP2;
 
@@ -61,30 +67,40 @@ void CambiarEditorTexto();
 
 int TamanioListaDoble();
 string texto;
+string agregarPalabra;
 int posx = 0;
 int posy = 2;
 int contadorNodos = 1;
 int contPalabrasModificadas=0;
+
+//pilas
 string retornarCadena(int);
 bool RetornarUltima();
+bool RetornarUltima2();
 string BanderaRevertir;
 string RevertirBuscar;
 string RevertirReemplazar;
+string RevertirCaracter;
+
+string BanderaRevertir2;
 
 //Pra Pila 1
-void InsertarPila1(string,string,string,string);
+void InsertarPila1(string,string,string,string,int,int);
 void MostrarPila1();
 void BuscarPila1();
 void ModificarPila1();
-void EliminarPila1(string,string);
+void EliminarPila1(string,string,int,int);
+void EliminarPila1Otro();
 
 //Pra Pila 2
-void InsertarPila2(string,string,string,string);
+void InsertarPila2(string,string,string,string,int,int);
 void MostrarPila2();
-//void BuscarPila2();
-//void ModificarPila2();
-void EliminarPila2(string,string);
+void EliminarPila2();
 
+
+//Reportes
+void PedirOpcionReporte();
+void GenerarArchivoDot();
 
 int main(){
 /*	for (int i = 0; i < 2; i++) {
@@ -96,6 +112,7 @@ int main(){
 //	string str;	
 	Menu();
 //	Tecla();
+//	GenerarArchivoDot();
 	getch();
 	return 0;
 }
@@ -162,10 +179,9 @@ void AgregarTexto(){
 	cout << "\n la cantida es : " << i;
 }
 
-void EnviarDatos(){
-	string agregarPalabra;
+void EnviarDatos(){	// ME Muestra el (Editor de texto) con opciones
 	system("cls");
-	cout << " ^w(Buscar y Reemplazar)	^c(Reportes)	 s^(Guardar)    x^(Escape) \n" ;
+	cout << " ^w(Buscar y Reemplazar)     ^c(Reportes)     s^(Guardar)     x^(Escape) \n" ;
 	cout << "D-----------------------------------------------------------------------D\n" ;
 	cout << texto;
 	char key;
@@ -216,16 +232,61 @@ void EnviarDatos(){
 				}
 				agregarPalabra= "";
 			}else if(ascii == 26){ // tecla ctrl+z
-				bool m = RetornarUltima();
-				if(m==true){
-					BanderaRevertir = "verdadero";
-					BuscarNodo(RevertirBuscar,RevertirReemplazar);
-					CambiarEditorTexto();
-					BanderaRevertir = "falso";
-					EnviarDatos();					
+				if(primeroP1!=NULL){					
+					bool m = RetornarUltima();
+					if(m==true){
+						BanderaRevertir = "verdadero";
+						BuscarNodo(RevertirBuscar,RevertirReemplazar);
+						CambiarEditorTexto();
+						BanderaRevertir = "falso";										
+					}else{
+						char temp[1];
+						strcpy(temp,RevertirCaracter.c_str());
+						AgregarNodo(temp[0],posx,posy,contadorNodos);
+					
+						EliminarPila1Otro();
+						string n = retornarCadena(posx);
+						string m = retornarCadena(posy);
+						InsertarPila2("Null","Null",RevertirCaracter,n+","+m,posx,posy);
+						agregarPalabra+=RevertirCaracter;
+						BanderaRevertir = "falso";					
+						texto+=RevertirCaracter;
+						contadorNodos++;
+						posx++;					
+					}					
 				}else{
-					cout<<"\n\nfalse";
+					cout << "\n\n\n ** Pila vacia ** \n";
+					system("pause");
 				}
+				EnviarDatos();
+				
+			}else if(ascii == 25){ // tecla ctrl+y
+				if(primeroP2!=NULL){				
+					bool m = RetornarUltima2();
+					if(m==true){
+						BanderaRevertir2 = "verdadero";
+						BuscarNodo(RevertirReemplazar,RevertirBuscar);
+						CambiarEditorTexto();
+						BanderaRevertir2 = "falso";										
+					}else{
+						TeclaDelete();
+						posx--;
+						contadorNodos--;
+						EliminarPila2();
+						EnviarDatos();	
+					}					
+				}else{
+					cout << "\n\n\n ** Pila 2 vacia ** \n";
+					system("pause");
+				}
+				EnviarDatos();
+				
+			}else if(ascii == 3){ // tecla ctrl+c				
+			//	PedirOpcionReporte();
+				GenerarArchivoDot();
+				system("pause");
+				EnviarDatos();
+				
 			}else{
 				cout << key;
 				AgregarNodo(key,posx,posy,contadorNodos);
@@ -305,21 +366,24 @@ void TeclaDelete(){
 		
  	string s = retornarCadena(a);   
  	string g = retornarCadena(b);  
-
+	string ma = s+","+g;
 	string zdato(1,bus);	
-	InsertarPila1("Null","Null",zdato,s+","+g);
+	InsertarPila1("Null","Null",zdato,ma,a,b);
 		
 	CambiarEditorTexto();
-/*
-	int ma = 0;
-	ma = texto.size();
-	char temp[ma];
+
+	int asd = 0;
+	asd = agregarPalabra.size();
+	char temp[asd];
+	
+	if(asd!=0){
+		strcpy(temp,agregarPalabra.c_str());
+		agregarPalabra = "";
+		for (int i = 0; i < asd-1; i++) {
+ 	 	agregarPalabra+= temp[i];
+		}
+	}
 		
-	strcpy(temp,texto.c_str());
-	texto = "";
-	for (int i = 0; i < ma-1; i++) {
- 	 	texto+= temp[i];
-	}	*/
 }
 
 void AgregarNodo(char n,int nx,int ny,int cont){
@@ -466,18 +530,26 @@ void BuscarNodo(string nodoBuscado, string nodoSustituir){
 		while(actual!=NULL){ //&& encontrado!=true){
 			if(actual->palabra == nodoBuscado){
 				contBus++;
-				if(BanderaRevertir=="verdadero"){
+				if(BanderaRevertir=="verdadero"){   //si existe dato de buscar y reemplazar pila1
 					if(contBus==1){
 					MandaraEliminarBuscar(actual->x,actual->y,tamanio-1,actual->contador,nodoSustituir);
-					EliminarPila1(nodoSustituir,nodoBuscado);
-					InsertarPila2(nodoSustituir,nodoBuscado,"Null","Null");																							
+					EliminarPila1Otro();
+					InsertarPila2(nodoSustituir,nodoBuscado,"Null","Null",0,0);																							
 					}
 				}else{
-					if(contBus==1){
-				//	cout << "dato: -" << actual->dato << " pos:"<<actual->x<<actual->y<<"nodo :"<<actual->contador<<endl;
-					MandaraEliminarBuscar(actual->x,actual->y,tamanio-1,actual->contador,nodoSustituir);
-					InsertarPila1(nodoBuscado,nodoSustituir,"Null","Null");																								
+					if(BanderaRevertir2 =="verdadero"){//si existe dato buscar y reemplzar pila2
+						if(contBus==1){
+						MandaraEliminarBuscar(actual->x,actual->y,tamanio-1,actual->contador,nodoSustituir);
+						InsertarPila1(nodoBuscado,nodoSustituir,"Null","Null",0,0);
+						EliminarPila2();																								
+						}
+					}else{
+						if(contBus==1){
+						MandaraEliminarBuscar(actual->x,actual->y,tamanio-1,actual->contador,nodoSustituir);
+						InsertarPila1(nodoBuscado,nodoSustituir,"Null","Null",0,0);																								
+						}
 					}
+					
 				}								
 				
 				if (contBus==tamanio){
@@ -697,13 +769,16 @@ string retornarCadena(int entero){
 
 //Para las Pilas
 
-void InsertarPila1(string pbuscado,string preemplazado,string ppalabra,string pposicion){
+void InsertarPila1(string pbuscado,string preemplazado,string ppalabra,string pposicion,int px,int py){
 	pila1* nuevo = new pila1();
 	nuevo -> buscado = pbuscado;
 	nuevo -> reemplazado = preemplazado;
 	nuevo -> estado = "No Revertido";
 	nuevo -> palabra = ppalabra;
 	nuevo -> posicion = pposicion;
+	nuevo -> x = px;
+	nuevo -> y = py;
+	
 	
 	nuevo->siguiente = primeroP1;
 	primeroP1 = nuevo;
@@ -711,6 +786,7 @@ void InsertarPila1(string pbuscado,string preemplazado,string ppalabra,string pp
 }
 
 void MostrarPila1(){
+	cout<<endl<<"--Pila1---";
 	pila1* actual = new pila1();
 	actual = primeroP1;
 	
@@ -780,7 +856,7 @@ void ModificarPila1(){
 	}
 }
 
-void EliminarPila1(string nodoBuscado,string nodoreemplazado){
+void EliminarPila1(string nodoBuscado,string nodoreemplazado,int ex,int ey){
 	pila1* actual = new pila1();
 	actual = primeroP1;
 	pila1* anterior = new pila1();
@@ -788,7 +864,8 @@ void EliminarPila1(string nodoBuscado,string nodoreemplazado){
     bool encontrado = false;
 	if(primeroP1!=NULL){
 		while(actual!=NULL && encontrado != true){
-			if(actual->buscado==nodoBuscado && actual->reemplazado==nodoreemplazado){
+		//	if((actual->buscado==nodoBuscado && actual->reemplazado==nodoreemplazado)
+		//		||(actual->x==ex && actual->y==ey)){
 				if(actual==primeroP1){
 					primeroP1 = primeroP1->siguiente;
 				}else{
@@ -796,7 +873,7 @@ void EliminarPila1(string nodoBuscado,string nodoreemplazado){
 				}
 				cout<<endl<<"eliminado";
 				encontrado=true;
-			}
+			//}
 			anterior = actual;
 			actual = actual->siguiente;
 		}
@@ -808,12 +885,25 @@ void EliminarPila1(string nodoBuscado,string nodoreemplazado){
 	}
 }
 
+void EliminarPila1Otro(){
+	if(primeroP1==NULL){
+		cout<<endl<<"la Pila esta vacia"<<endl;
+		return;
+	}
+	pila1* actual = new pila1();
+	actual = primeroP1;
+	cout<<endl<<"Eliminado ->"<<actual->palabra<<endl;
+	primeroP1 = actual->siguiente;
+	delete(actual);
+}
+
 bool RetornarUltima(){
 	bool mandar;
 	pila1* actual = new pila1();
 	actual = primeroP1;
 	if(actual->buscado == "Null"){
 		mandar = false;
+		RevertirCaracter = actual->palabra;
 	}else{
 		mandar = true;
 		RevertirBuscar = actual->reemplazado;
@@ -824,18 +914,22 @@ bool RetornarUltima(){
 
 
 //Para la Pila 2
-void InsertarPila2(string pbuscado,string preemplazado,string ppalabra,string pposicion){
+void InsertarPila2(string pbuscado,string preemplazado,string ppalabra,string pposicion,int px,int py){
 	pila2* nuevo = new pila2();
 	nuevo -> buscado = pbuscado;
 	nuevo -> reemplazado = preemplazado;
 	nuevo -> estado = "Revertido";
 	nuevo -> palabra = ppalabra;
 	nuevo -> posicion = pposicion;
+	nuevo -> x = px;
+	nuevo -> y = py;
 	
 	nuevo->siguiente = primeroP2;
 	primeroP2 = nuevo;		
 }
+
 void MostrarPila2(){
+	cout<<endl<<"--Pila2---";
 	pila2* actual = new pila2();
 	actual = primeroP2;
 	
@@ -854,3 +948,124 @@ void MostrarPila2(){
 	}
 		
 }
+
+void EliminarPila2(){
+	if(primeroP2==NULL){
+		cout<<endl<<"la Pila esta vacia"<<endl;
+		return;
+	}
+	pila2* actual = new pila2();
+	actual = primeroP2;
+	cout<<endl<<"Eliminado ->"<<actual->palabra<<endl;
+	primeroP2 = actual->siguiente;
+	delete(actual);
+}
+
+bool RetornarUltima2(){
+	bool mandar;
+	pila2* actual = new pila2();
+	actual = primeroP2;
+	if(actual->buscado == "Null"){
+		mandar = false;
+		RevertirCaracter = actual->palabra;
+	}else{
+		mandar = true;
+		RevertirBuscar = actual->reemplazado;
+		RevertirReemplazar = actual->buscado;
+	}
+	return mandar; 
+}
+
+
+
+//para Reportes
+
+void PedirOpcionReporte(){
+	int opcion=0;
+	cout << "\n\n\nReportes:  1)Lista     2) Palabras Buscadas     3)Palabras Ordenadas \n\n" ;
+	cout << "Eliga Opcion: ";
+	cin >> opcion;
+	if(opcion==1){
+		
+	}else if(opcion==1){
+		cout << "\n\n*** Reporte Lista generada\n\n\n";
+		GenerarArchivoDot();
+		system("pause");
+	}else if(opcion==2){
+		cout << "\n\n** Reporte Palabras Buscadas generada\n\n\n";
+	}else if(opcion==3){
+		cout << "\n\n** Reporte Palabras Ordenadas generada\n\n\n";
+	}else{
+		cout << "\n\n **Opcion Incorrecta**";
+	}	
+}
+
+void GenerarArchivoDot(){
+	cout<<"\n";
+	int t = TamanioListaDoble();
+	const char* lista[t];
+	int contLista=0;
+	nodo* actual = new nodo();
+	actual = primero;
+	if(primero!=NULL){
+		while(actual!=NULL){			
+										
+			if(actual->dato == '\n'){
+				lista[contLista] = " ";	
+			}else{
+				lista[contLista] = &actual -> dato;			
+			}
+			actual = actual -> siguiente;
+			contLista++;
+		}
+	}else{
+		cout << "\nlista vacia \n";
+	}
+	
+    for(int j = 0;j<t;j++){
+			cout<<"---"<<lista[j]<<endl;
+	 }
+	
+	/*
+	FILE *fp = NULL;
+	fp = fopen("Lista.dot","w");
+	fprintf(fp," ");
+	fp = fopen("Lista.dot","a");
+	fprintf(fp,"graph {\nrankdir = LR;\n");
+	
+	hola[0] = "hola";
+	cout<<hola[0]<<endl;
+	
+	
+	fprintf(fp,hola[0]);
+	fprintf(fp,"--");
+	fprintf(fp,hola[1]);
+	fprintf(fp,";");
+	*/
+//	fprintf(fp," \"%d,%d\";\n",3,4);
+//	fprintf(fp," \"%d,%d\" --  \n",3,4);
+//	fprintf(fp," \"%d,%d\";\n",1,2);
+	/*
+	for(int i = 0;i<3;i++){
+		for(int j = 0;j<4;j++){
+			if(i==0){
+				fprintf(fp," \"%d,%d\" --  \n",i,j);
+			}else if(j==(4-1)){
+				fprintf(fp," \"%d,%d\";\n",i,j);
+			}else{
+				fprintf(fp," \"%d,%d\";\n",i,j);
+				fprintf(fp," \"%d,%d\" --  \n",i,j);
+			}
+		}
+	} */
+		
+//	fprintf(fp,"}\n");
+//	fclose(fp);
+//	const char* cmd1 = "dot.exe MyMatrix.dot -Tpng -o Hola.png";
+//	const char* cmd2 = "xdgg-open Hola.png";
+//	system("dot -Tpng Lista.dot -o hola.png");
+	cout << "\n\ngraficado";
+	
+		system("pause");
+}
+
