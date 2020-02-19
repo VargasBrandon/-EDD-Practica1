@@ -1,0 +1,7 @@
+digraph G{
+rankdir = LR;
+char0[shape=box label="texto
+C:\Users\HP\Desktop\Archivo\texto.txt
+"style=filled fillcolor=green];
+char0->char0;
+}

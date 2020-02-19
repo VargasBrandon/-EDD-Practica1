@@ -1,0 +1,23 @@
+digraph G{
+rankdir = LR;
+p0[shape=box label="Palabra Buscada : universidad
+Reemplazada por : U
+Estado : Revertido
+Palabra : Null
+Posicion : Null
+"style=filled fillcolor=red];
+p1[shape=box label="Palabra Buscada : como
+Reemplazada por : hola
+Estado : Revertido
+Palabra : Null
+Posicion : Null
+"style=filled fillcolor=red];
+p2[shape=box label="Palabra Buscada : como
+Reemplazada por : hola
+Estado : Revertido
+Palabra : Null
+Posicion : Null
+"style=filled fillcolor=red];
+p0->p1;
+p1->p2;
+}

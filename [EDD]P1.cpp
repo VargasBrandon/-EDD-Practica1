@@ -4,6 +4,9 @@
 #include<string>
 #include<bits/stdc++.h>
 #include<sstream> 
+#include<fstream> 
+
+//para graphviz
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
@@ -43,6 +46,21 @@ struct pila2{
 }*primeroP2;
 
 
+struct listaSimple{
+	string buscadas;
+	string reemplazadas;
+	listaSimple* siguiente;
+}*primeroLS, *ultimoLS;
+
+
+struct listaCircular{
+	string nombre;
+	string direccion;
+	int contador;
+	listaCircular* siguiente;
+}*primeroLC, *ultimoLC;
+
+
 void Menu();
 void AgregarNodo(char,int,int,int);
 void AgregarNodoInicio(char,int,int,int,string);
@@ -65,6 +83,13 @@ void MandaraEliminarBuscar(int,int,int,int,string);
 void ModificarPosiciones(int,int,int);
 void CambiarEditorTexto();
 
+//archivos
+void AbrirArchivo();
+void GuardarArchivo();
+void GuardarTextoArchivoLista();
+void vaciarListaDoble();
+
+
 int TamanioListaDoble();
 string texto;
 string agregarPalabra;
@@ -72,7 +97,7 @@ int posx = 0;
 int posy = 2;
 int contadorNodos = 1;
 int contPalabrasModificadas=0;
-
+int contArchivosRecientes;
 //pilas
 string retornarCadena(int);
 bool RetornarUltima();
@@ -98,21 +123,27 @@ void MostrarPila2();
 void EliminarPila2();
 
 
+//paralistasimple
+void insertarListaSimple(string,string);
+void MostrarListaSimple();
+
+
+//paralistacircular
+void InsertarListaCircular(string,string,int);	
+void MostrarListaCircular();
+int contListaCircular;
+
+
 //Reportes
 void PedirOpcionReporte();
-void GenerarArchivoDot();
+void GenerarGraficaListaDoble();
+void GenerarGraficaListaSimple();
+void GenerarGraficaPila1();
+void GenerarGraficaArchivos();
 
 int main(){
-/*	for (int i = 0; i < 2; i++) {
- 	 cout << "digito : ";
- 	 cin >> o;
- 	 texto += "\n";
- 	 texto += o;
-	}  */
-//	string str;	
 	Menu();
 //	Tecla();
-//	GenerarArchivoDot();
 	getch();
 	return 0;
 }
@@ -122,9 +153,10 @@ void Menu(){
 	do{
 		cout << "\n------Menu------\n" ;
 		cout << "1)Crear Archivo \n" ;
-		cout << "2)ver Lista \n" ;
-		cout << "3)Buscar-modificar \n";
-		cout << "4)salir \n";
+		cout << "2)Abrir Archivo \n" ;
+		cout << "3)Archivos Recientes \n";
+		cout << "4)MostrarListas \n";
+		cout << "5)salir \n";
 		cout << "Opcion :";
 		cin >> opcion;
 		switch(opcion){
@@ -134,18 +166,24 @@ void Menu(){
 				system("pause");			
 				break;
 			case 2:
+				AbrirArchivo();				
+				system("pause");
+				EnviarDatos();
+				break;
+			case 3:		
+				MostrarListaCircular();								    
+				system("pause");
+				break;
+			case 4:
 				MostrarLista1();
 				MostrarPila1();
 				MostrarPila2();
-				cout << "\n";
+				MostrarListaSimple();
 				system("pause");
-				break;
-			case 3:							    
-				system("pause");
-				break;				
-		}
+				break;			
+			}
 		system("cls");
-	}while(opcion!=4);
+	}while(opcion!=5);
 	cout << "**fin programa**";
 }
 
@@ -282,11 +320,12 @@ void EnviarDatos(){	// ME Muestra el (Editor de texto) con opciones
 				EnviarDatos();
 				
 			}else if(ascii == 3){ // tecla ctrl+c				
-			//	PedirOpcionReporte();
-				GenerarArchivoDot();
-				system("pause");
+				PedirOpcionReporte();
 				EnviarDatos();
 				
+			}else if(ascii == 19){ // tecla ctrl+s				
+				GuardarArchivo();				
+				EnviarDatos();				
 			}else{
 				cout << key;
 				AgregarNodo(key,posx,posy,contadorNodos);
@@ -546,6 +585,7 @@ void BuscarNodo(string nodoBuscado, string nodoSustituir){
 					}else{
 						if(contBus==1){
 						MandaraEliminarBuscar(actual->x,actual->y,tamanio-1,actual->contador,nodoSustituir);
+						insertarListaSimple(nodoBuscado,nodoSustituir);
 						InsertarPila1(nodoBuscado,nodoSustituir,"Null","Null",0,0);																								
 						}
 					}
@@ -766,6 +806,30 @@ string retornarCadena(int entero){
 	return s;
 }
 
+void vaciarListaDoble(){
+	nodo* actual = new nodo();
+	actual = primero;
+	nodo* anterior = new nodo();
+	anterior = NULL;
+	if(primero != NULL){
+		while(actual!=NULL){		
+				if(actual==primero){
+					primero = primero->siguiente;
+					primero->atras = NULL;
+				}else if(actual==ultimo){
+					anterior->siguiente = NULL;
+					ultimo = anterior;					
+				}else{
+					anterior->siguiente = actual->siguiente;
+					actual->siguiente->atras = anterior;
+				}			
+			anterior = actual;
+			actual = actual->siguiente;
+		}		
+	}else{
+	
+	}
+}
 
 //Para las Pilas
 
@@ -977,6 +1041,183 @@ bool RetornarUltima2(){
 }
 
 
+//Para Listas Simples
+void insertarListaSimple(string buscado,string reemplazado){
+	listaSimple*nuevo = new listaSimple();
+
+	nuevo->buscadas = buscado;
+	nuevo->reemplazadas = reemplazado;
+	
+	if(primeroLS==NULL){
+		primeroLS = nuevo;
+		primeroLS->siguiente = NULL;
+		ultimoLS = nuevo;
+	}else{
+		ultimoLS->siguiente = nuevo;
+		nuevo->siguiente = NULL;
+		ultimoLS =nuevo;
+	}
+	
+}
+
+void MostrarListaSimple(){
+	listaSimple*actual = new listaSimple();
+	actual = primeroLS;
+	if(primeroLS!=NULL){
+		while(actual!=NULL){
+			cout<<"--"<<actual->buscadas<<actual->reemplazadas<<"--"<<endl;
+			actual = actual->siguiente;
+		}
+	}else{
+		cout<<"\n\n lista simple vacia\n\n";
+	}
+}
+
+
+//Para Lista Circular
+
+void InsertarListaCircular(string Cnombre,string Cdireccion,int CcontadorCircular){
+	listaCircular*nuevo = new listaCircular();
+
+	nuevo->nombre = Cnombre;
+	nuevo->direccion = Cdireccion;
+	nuevo->contador = CcontadorCircular;
+	if(primeroLC==NULL){
+		primeroLC = nuevo;
+		primeroLC->siguiente = primeroLC;
+		ultimoLC = primeroLC;
+	}else{
+		ultimoLC->siguiente = nuevo;
+		nuevo->siguiente = primeroLC;
+		ultimoLC =nuevo;
+	}	
+}
+
+void MostrarListaCircular(){
+	system("cls");
+	cout << "        ^c(GenerarReporte de Archivos)            x^(Escape) \n" ;
+	cout << "D-----------------------------------------------------------------------D\n" ;
+	cout<<"\n\n        Archivos Recientes\n\n\n";
+	listaCircular*actual = new listaCircular();
+	actual = primeroLC;
+	
+	if(primeroLC!=NULL){
+		do{
+			cout<<"        "<<actual->contador<<") "<<actual->nombre<<"        "<<actual->direccion<<"--"<<"\n";
+			actual = actual->siguiente;
+		}while(actual!=primeroLC);
+	}else{
+		cout<<"\n\n lista circular vacia\n\n";
+	}
+	
+	char key;
+	int ascii;
+	while(1){
+		key = getch();
+		ascii = key;
+		if(ascii == 24){ //tecla ctrl+x
+				system("cls");
+				Menu();	
+		}else if(ascii == 3){ // tecla ctrl+c				
+				GenerarGraficaArchivos();
+				MostrarListaCircular();								
+		}else if(ascii>=49 && ascii<=57)
+		{
+			
+		}else{
+			
+		}
+	}
+	cout<<"\n\n\n";
+}
+
+//Archivos
+void AbrirArchivo(){
+	ifstream arch;
+    string direccionAbrir = "C:\\Users\\HP\\Desktop\\Archivo";
+	string nombreAbrir;
+	cout<<"\n\n\n Nombre de Archivo: ";
+	cin>>nombreAbrir;
+	direccionAbrir+= "\\"+nombreAbrir+".txt";
+	
+	arch.open(direccionAbrir.c_str(),ios::in);
+	
+	if(arch.fail()){
+		cout<<"\n\nno se encontro archivo"<<endl;
+		Menu();
+	}
+	
+	InsertarListaCircular(nombreAbrir,direccionAbrir,contArchivosRecientes+1);
+	contArchivosRecientes++;
+	texto="";
+	while(!arch.eof()){
+		getline(arch,texto);		
+	}
+	arch.close();
+	GuardarTextoArchivoLista();
+	
+	cout<<"\n\n**texto de archivo agregado a editor**\n"<<endl;
+	system("pause");
+}
+
+void GuardarArchivo(){
+	ofstream arch;
+	string direccionAbrir = "C:\\Users\\HP\\Desktop\\Archivo";
+	string nombreAbrir;
+	cout<<"\n\n\n Nombre de Archivo: ";
+	cin>>nombreAbrir;
+	direccionAbrir+= "\\"+nombreAbrir+".txt";
+
+	arch.open(direccionAbrir.c_str(),ios::out);
+	
+	if(arch.fail()){
+		cout<<"\n\nno se abrio archivo"<<endl;
+		exit(1);
+	}else{
+		cout<<"\n\n** Archivo Creado **\n\n"<<endl;
+	}
+
+	arch<<texto;	
+	arch.close();
+	
+	system("pause");
+}
+
+void GuardarTextoArchivoLista(){
+	//vaciarListaDoble();
+	posx = 0;
+	posy = 2;
+	contadorNodos = 1;
+	contPalabrasModificadas=0;
+	int asd = 0;
+	asd = texto.size();
+	char temp[asd];
+	
+	if(asd!=0){
+		strcpy(temp,texto.c_str());
+		for (int i = 0; i < asd; i++) {			
+ 	 		if(temp[i]==' '){ 	 			
+				AgregarNodo(' ',posx,posy,contadorNodos);
+				posx++;
+				contadorNodos++;
+				
+				int cp = posx;
+				cp = cp - agregarPalabra.size() -1;
+				for (int i = cp; i < posx-1; i++) {
+					ModificarPalabra(i,posy,agregarPalabra);
+				}
+				agregarPalabra="";
+			}else{
+				AgregarNodo(temp[i],posx,posy,contadorNodos);
+				posx++;
+				contadorNodos++;
+				agregarPalabra+=temp[i];
+			}				
+		}
+	}
+}
+
+
 
 //para Reportes
 
@@ -985,87 +1226,212 @@ void PedirOpcionReporte(){
 	cout << "\n\n\nReportes:  1)Lista     2) Palabras Buscadas     3)Palabras Ordenadas \n\n" ;
 	cout << "Eliga Opcion: ";
 	cin >> opcion;
-	if(opcion==1){
-		
-	}else if(opcion==1){
-		cout << "\n\n*** Reporte Lista generada\n\n\n";
-		GenerarArchivoDot();
-		system("pause");
+	if(opcion==1){				
+		GenerarGraficaListaDoble();	
+		system("pause");	
 	}else if(opcion==2){
-		cout << "\n\n** Reporte Palabras Buscadas generada\n\n\n";
+		GenerarGraficaPila1();
+		system("pause");		
 	}else if(opcion==3){
-		cout << "\n\n** Reporte Palabras Ordenadas generada\n\n\n";
+		GenerarGraficaListaSimple()	;
+		system("pause");	
 	}else{
 		cout << "\n\n **Opcion Incorrecta**";
 	}	
 }
 
-void GenerarArchivoDot(){
-	cout<<"\n";
-	int t = TamanioListaDoble();
-	const char* lista[t];
-	int contLista=0;
-	nodo* actual = new nodo();
-	actual = primero;
-	if(primero!=NULL){
-		while(actual!=NULL){			
-										
-			if(actual->dato == '\n'){
-				lista[contLista] = " ";	
-			}else{
-				lista[contLista] = &actual -> dato;			
-			}
-			actual = actual -> siguiente;
-			contLista++;
-		}
-	}else{
-		cout << "\nlista vacia \n";
+void GenerarGraficaListaDoble(){
+	int cont = 0;
+	string concatenar = "";
+	
+	nodo*actual = new nodo();
+	actual=primero;
+	ofstream arch;
+	arch.open("listadoble.dot",ios::out);
+	arch<<"digraph G{\n";
+	arch<<"rankdir = LR;\n";
+	arch<<"null1 [label=\"NULL\"];\n";
+	arch<<"null2 [label=\"NULL\"];\n";		
+	
+	while (actual!=NULL) {	
+		concatenar+="char"+retornarCadena(cont)+"[label=\""+actual->dato+"\"];\n";
+      	actual=actual->siguiente;
+      	cont++;		
+    }
+    
+    for(int i=0;i<cont-1;i++){
+    	concatenar+="char"+retornarCadena(i)+"->char"+retornarCadena(i+1)+";\n";
+    	concatenar+="char"+retornarCadena(i+1)+"->char"+retornarCadena(i)+";\n";   	
 	}
-	
-    for(int j = 0;j<t;j++){
-			cout<<"---"<<lista[j]<<endl;
-	 }
-	
-	/*
-	FILE *fp = NULL;
-	fp = fopen("Lista.dot","w");
-	fprintf(fp," ");
-	fp = fopen("Lista.dot","a");
-	fprintf(fp,"graph {\nrankdir = LR;\n");
-	
-	hola[0] = "hola";
-	cout<<hola[0]<<endl;
-	
-	
-	fprintf(fp,hola[0]);
-	fprintf(fp,"--");
-	fprintf(fp,hola[1]);
-	fprintf(fp,";");
-	*/
-//	fprintf(fp," \"%d,%d\";\n",3,4);
-//	fprintf(fp," \"%d,%d\" --  \n",3,4);
-//	fprintf(fp," \"%d,%d\";\n",1,2);
-	/*
-	for(int i = 0;i<3;i++){
-		for(int j = 0;j<4;j++){
-			if(i==0){
-				fprintf(fp," \"%d,%d\" --  \n",i,j);
-			}else if(j==(4-1)){
-				fprintf(fp," \"%d,%d\";\n",i,j);
-			}else{
-				fprintf(fp," \"%d,%d\";\n",i,j);
-				fprintf(fp," \"%d,%d\" --  \n",i,j);
-			}
-		}
-	} */
 		
-//	fprintf(fp,"}\n");
-//	fclose(fp);
-//	const char* cmd1 = "dot.exe MyMatrix.dot -Tpng -o Hola.png";
-//	const char* cmd2 = "xdgg-open Hola.png";
-//	system("dot -Tpng Lista.dot -o hola.png");
-	cout << "\n\ngraficado";
+	arch<<concatenar;
+	arch<<"null1->char0;\n";
+	arch<<"char0->null1;\n";
+	arch<<"char"+retornarCadena(cont-1)+"->null2;\n";
+	arch<<"null2->char"+retornarCadena(cont-1)+";\n";
+  	
+	arch<<"}\n";
+	arch.close();	
 	
-		system("pause");
+	system("dot -Tpng listadoble.dot -o listadoble.png");
+	cout << "\n\n*** Reporte Lista generada\n\n\n";
+	system("pause");
+}
+
+void GenerarGraficaPila1(){
+	int cont = 0;
+	int cont2 = 0;
+	string concatenar = "";
+	string p1 = "Palabra Buscada : ";
+	string p2 = "Reemplazada por : ";
+	string p3 = "Estado : ";
+	string p4 = "Palabra : ";
+	string p5 = "Posicion : ";
+	
+	pila1*actual = new pila1();
+	actual=primeroP1;
+	
+	pila2*actual2 = new pila2();
+	actual2=primeroP2;
+	
+	ofstream arch;
+	arch.open("listapila11.dot",ios::out);
+	arch<<"digraph G{\n";
+	arch<<"rankdir = LR;\n";
+			
+	while (actual!=NULL) {	
+		concatenar+="char"+retornarCadena(cont)+"[shape=box label=\""
+		+p1+actual->buscado+"\n"
+		+p2+actual->reemplazado+"\n"
+		+p3+actual->estado+"\n"
+		+p4+actual->palabra+"\n"
+		+p5+actual->posicion+"\n"
+		+"\"style=filled fillcolor=green];\n";
+      	actual=actual->siguiente;
+      	cont++;		
+    }
+    for(int i=0;i<cont-1;i++){
+    	concatenar+="char"+retornarCadena(i)+"->char"+retornarCadena(i+1)+";\n"; 	
+	}		
+	arch<<concatenar;
+	
+	
+	concatenar = "";
+	while (actual2!=NULL) {	
+		concatenar+="p"+retornarCadena(cont2)+"[shape=box label=\""
+		+p1+actual2->buscado+"\n"
+		+p2+actual2->reemplazado+"\n"
+		+p3+actual2->estado+"\n"
+		+p4+actual2->palabra+"\n"
+		+p5+actual2->posicion+"\n"
+		+"\"style=filled fillcolor=red];\n";
+      	actual2=actual2->siguiente;
+      	cont2++;		
+    }
+
+    for(int i=0;i<cont2-1;i++){
+    	concatenar+="p"+retornarCadena(i)+"->p"+retornarCadena(i+1)+";\n"; 	
+	}		
+	arch<<concatenar;
+	
+	arch<<"}\n";
+	arch.close();	
+	
+	system("dot -Tpng listapila11.dot -o listapila11.png");
+	cout << "\n\n** Reporte Palabras Buscadas generada\n\n\n";
+	system("pause");
+}
+
+void GenerarGraficaListaSimple(){
+	int cont = 0;
+	int cont2 = 0;
+	string concatenar = "";
+	string p1 = "Reemplazada por : ";
+	string p2 = "Reemplazo a : ";
+	
+	listaSimple*actual = new listaSimple();
+	actual=primeroLS;
+	
+	listaSimple*actual2 = new listaSimple();
+	actual2=primeroLS;
+	
+	ofstream arch;
+	arch.open("listaSimple.dot",ios::out);
+	arch<<"digraph G{\n";
+	arch<<"rankdir = LR;\n";
+
+	while (actual!=NULL) {	
+		concatenar+="char"+retornarCadena(cont)+"[shape=box label=\""
+		+actual->buscadas+"\n"
+		+p1+actual->reemplazadas+"\n"
+		+"\"style=filled fillcolor=green];\n";
+      	actual=actual->siguiente;
+      	cont++;		
+    }
+	
+    for(int i=0;i<cont-1;i++){
+    	concatenar+="char"+retornarCadena(i)+"->char"+retornarCadena(i+1)+";\n";	
+	}		
+	arch<<concatenar;
+	
+	concatenar="";
+
+	while (actual2!=NULL) {	
+		concatenar+="p"+retornarCadena(cont2)+"[shape=box label=\""
+		+actual2->reemplazadas+"\n"
+		+p2+actual2->buscadas+"\n"
+		+"\"style=filled fillcolor=yellow];\n";
+      	actual2=actual2->siguiente;
+      	cont2++;		
+    }
+	
+    for(int i=0;i<cont2-1;i++){
+    	concatenar+="p"+retornarCadena(i)+"->p"+retornarCadena(i+1)+";\n";	
+	}		
+	arch<<concatenar;
+
+
+	arch<<"}\n";
+	arch.close();	
+	
+	system("dot -Tpng listaSimple.dot -o listaSimple.png");
+	cout << "\n\n** Reporte Palabras Ordenadas generada\n\n\n";
+	system("pause");
+}
+
+void GenerarGraficaArchivos(){
+	int cont = 0;
+	string concatenar = "";
+
+	listaCircular*actual = new listaCircular();
+	actual = primeroLC;
+	
+	ofstream arch;
+	arch.open("listaCircular.dot",ios::out);
+	arch<<"digraph G{\n";
+	arch<<"rankdir = LR;\n";
+
+	do{
+		concatenar+="char"+retornarCadena(cont)+"[shape=box label=\""
+		+actual->nombre+"\n"
+		+actual->direccion+"\n"
+		+"\"style=filled fillcolor=green];\n";
+      	actual=actual->siguiente;
+      	cont++;		
+    }while(actual!=primeroLC);
+	
+    for(int i=0;i<cont-1;i++){
+    	concatenar+="char"+retornarCadena(i)+"->char"+retornarCadena(i+1)+";\n";	
+	}		
+	arch<<concatenar;	
+	arch<<"char"+retornarCadena(cont-1)+"->char0;\n";
+	
+	
+	arch<<"}\n";
+	arch.close();	
+	
+	system("dot -Tpng listaCircular.dot -o listaCircular.png");
+	cout<<"\n\n\n\n***grafica realizada**\n\n\n\n";
+	system("pause");
 }
 

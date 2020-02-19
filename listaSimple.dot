@@ -1,0 +1,17 @@
+digraph G{
+rankdir = LR;
+char0[shape=box label="hola
+Reemplazada por : ma
+"style=filled fillcolor=green];
+char1[shape=box label="hola
+Reemplazada por : ma
+"style=filled fillcolor=green];
+char0->char1;
+p0[shape=box label="ma
+Reemplazo a : hola
+"style=filled fillcolor=yellow];
+p1[shape=box label="ma
+Reemplazo a : hola
+"style=filled fillcolor=yellow];
+p0->p1;
+}
